@@ -11,19 +11,15 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/strings"
 )
 
-var (
-	emptyMD5     string
-	emptyMD5Once sync.Once
-)
+// Computed lazily to avoid calling MD5 in an init, which panics under GODEBUG=fips140=only.
+var emptyMD5 = sync.OnceValue(func() string {
+	sum := md5.Sum(nil)
+	return string(sum[:])
+})
 
 func md5T(data string) (string, bool, error) {
 	if len(data) == 0 {
-		// Computed lazily to avoid calling MD5 in an init, which panics under GODEBUG=fips140=only.
-		emptyMD5Once.Do(func() {
-			sum := md5.Sum(nil)
-			emptyMD5 = string(sum[:])
-		})
-		return emptyMD5, true, nil
+		return emptyMD5(), true, nil
 	}
 
 	h := md5.New()

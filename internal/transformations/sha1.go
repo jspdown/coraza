@@ -11,19 +11,15 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/strings"
 )
 
-var (
-	emptySHA1     string
-	emptySHA1Once sync.Once
-)
+// Computed lazily to avoid calling SHA-1 in an init, which panics under GODEBUG=fips140=only.
+var emptySHA1 = sync.OnceValue(func() string {
+	sum := sha1.Sum(nil)
+	return string(sum[:])
+})
 
 func sha1T(data string) (string, bool, error) {
 	if len(data) == 0 {
-		// Computed lazily to avoid calling SHA-1 in an init, which panics under GODEBUG=fips140=only.
-		emptySHA1Once.Do(func() {
-			sum := sha1.Sum(nil)
-			emptySHA1 = string(sum[:])
-		})
-		return emptySHA1, true, nil
+		return emptySHA1(), true, nil
 	}
 	h := sha1.New()
 	_, err := io.WriteString(h, data)
